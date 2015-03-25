@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block contenido %}
+<div class="container">
+	{% for message in get_flashed_messages() %}
+		<div class="alert alert-warning">
+			<button type="button" class="close" data-dismiss="alert">&times;</button>
+			{{ message }}
+		</div>
+	{% endfor %}
+    		<div class="page-header">
+    				{% if not conocido %}
+    					<p>Encantado de conocerte {{name}}</p>
+    				{%else%}
+    					<p>Bienvenido de nuevo {{name}}</p>
+    				{% endif %}
+    			</h1>
+    		</div>
+    		{{ wtf.quick_form(form) }}
+    	</div>
+{% endblock %}
