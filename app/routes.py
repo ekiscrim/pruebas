@@ -4,6 +4,8 @@ from flask.ext.wtf import Form
 from wtforms import StringField, SubmitField
 from wtforms.validators import Required
 from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.mail import Mail
+from flask.ext.mail import Message
 import os
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -17,6 +19,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] =\
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True # asi no tengo que hacer commit todo el rato
 
 db = SQLAlchemy(app)
+
+#configurar email
+
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+
+app.config['PRUEBAS_MAIL_SUBJECT_PREFIX'] = '[Pruebas]'
+app.config['PRUEBAS_MAIL_SENDER'] = 'Pruebas Admin <xcstudiosonly@gmail.com>'
+app.config['PRUEBAS_ADMIN'] = os.environ.get('PRUEBAS_ADMIN')
+
+mail = Mail(app)
 
 class Role(db.Model):
 	__tablename__ = 'roles'
@@ -77,6 +93,13 @@ def index():
 		form.name.data = ''
 	return render_template('index.html',form=form, name=name)
 '''
+def enviar_email(para,asunto,template, **kwargs): # kwargs - lista de argumentos
+	msg = Message(app.config['PRUEBAS_MAIL_SUBJECT_PREFIX'] + asunto, 
+				  sender= app.config['PRUEBAS_MAIL_SENDER'], recipients=[para])
+	msg.body = render_template(template + '.txt', **kwargs)
+	msg.html = render_template(template + '.html', **kwargs)
+	mail.send(msg)
+
 
 @app.route('/',methods=['GET','POST'])
 def index():
@@ -90,9 +113,12 @@ def index():
 			usuario = User(username=formulario.name.data)
 			db.session.add(usuario)
 			session['conocido'] = False
+			if app.config['PRUEBAS_ADMIN']: #si existe (esta definida arriba)
+				enviar_email(app.config['PRUEBAS_ADMIN'],'Nuevo usuario',
+							 'mail/new_user', user=usuario) # usa el template de mail/new_user de
+															# contenido del mensaje
 		else:
 			session['conocido'] = True
-
 		session['nick'] = formulario.name.data #guardamos la nueva sesion
 		formulario.name.data = ''
 		return redirect(url_for('index')) #redireccionamos para evitar el refresco
@@ -103,6 +129,8 @@ def index():
 @app.route('/usuario/<nick>')
 def usuario(nick):
 	return render_template('usuario.html', name=nick)
+
+
 
 if __name__ == '__main__':
 	app.run(debug=True)
